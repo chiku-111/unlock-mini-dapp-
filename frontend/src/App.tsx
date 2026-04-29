@@ -9,14 +9,20 @@ type AccessState = "locked" | "unlocked";
 // setAccessState 用来修改这个状态，修改后 React 会自动刷新页面。
 function App() {
 const [accessState, setAccessState] = useState<AccessState>("locked");
-const [walletAddress, setWalletAdddress]=useState<string | null>(null);
+const [walletAddress, setWalletAddress]=useState<string | null>(null);
 
 function handleConnectWallet(){
-  setWalletAdddress("0x1234...abcd");
+  setWalletAddress("0x1234...abcd");
 }
 
 function handleCheckMembership() {
-  setAccessState("unlocked");
+  if(walletAddress === null){
+    setAccessState("locked");
+  //立刻结束handleCheckMembership 函数
+    return
+  }else{
+      setAccessState("unlocked");
+  }
 }
 
   return (
@@ -27,8 +33,6 @@ function handleCheckMembership() {
       <p>Wallet: {walletAddress ?? "not connected"}</p> 
 
       <p>Current status: {accessState}</p>
-
-      <button type="button">Connect Wallet</button>
 
       <button type="button" onClick={handleCheckMembership}>
         Check Membership
