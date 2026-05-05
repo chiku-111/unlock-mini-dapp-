@@ -8,6 +8,7 @@ contract MembershipLock{
     //address 对应会员到期时间戳
     mapping(address => uint256) public membershipExpiresAt;
 
+// constructor 会在合约部署时自动执行一次,部署合约的人为msg.sender,部署者设置为管理员 owner
     constructor(){
         owner = msg.sender;
     }
@@ -21,12 +22,13 @@ contract MembershipLock{
     }
     // 用户自己调用这个函数，为自己开通会员
     function purchaseMembership() public{
+        //msg.sender不是参数, sol自动提供的 当前调用者地址
         membershipExpiresAt[msg.sender] = block.timestamp + 30 days;
     }
 
     // 查询 user 当前是否拥有有效会员
     function hasValidMembership(address user) public view returns (bool) {
         return membershipExpiresAt[user] > block.timestamp;
-
     }
+    
 }
