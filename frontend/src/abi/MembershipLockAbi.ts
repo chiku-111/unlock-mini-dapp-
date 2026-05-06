@@ -17,4 +17,4 @@ export const MEMBERSHIP_LOCK_ABI = [
             },
         ],
     },
-] as const; //本 ABI 是固定不变的常量，里面的字符串当成确定值
+] as const;
