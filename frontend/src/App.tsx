@@ -87,18 +87,15 @@ async function handleCheckMembership() {
     setIsCheckingMembership(true);
 
     try{
-      const membershipReadRequest = {
+      // @ts-ignore viem type inference is stricter than this local demo needs.
+      const isMember = await publicClient.readContract({
         //not walletAddress, is contract address: 去哪里查
         address: MEMBERSHIP_LOCK_ADDRESS as Address,
         abi: MEMBERSHIP_LOCK_ABI,
         functionName: "hasValidMembership",
         //walletAddress: 查谁
         args: [walletAddress as Address],
-        //本项目非必须, 当前 membership readContract 逻辑本身不依赖它
-        authorizationList: [], 
-      } as const;
-
-      const isMember = await publicClient.readContract(membershipReadRequest);
+      });
 
       setAccessState(isMember ? "unlocked" : "locked");
     }catch {

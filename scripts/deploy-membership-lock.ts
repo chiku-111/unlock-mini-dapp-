@@ -2,7 +2,7 @@
 //前端会用这个地址调用, hasValidMembership(account)
 import { network } from "hardhat";
 
-const { ethers } = await network.create();
+const { ethers } = await network.create("localhost");
 
 const membershipLock = await ethers.deployContract("MembershipLock");
 
