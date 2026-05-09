@@ -1,7 +1,13 @@
 //useState状态变化 locked/unlocked
 import { useState } from 'react'
 
-import { createPublicClient, http, type Address } from 'viem';
+import { 
+  createPublicClient,
+  createWalletClient,
+  custom,
+  http, 
+  type Address 
+} from 'viem';
 import { hardhat } from "viem/chains";
 
 // 引入 MembershipLock 合约的 ABI
@@ -18,7 +24,8 @@ type AccessState = "locked" | "unlocked";
 // EthereumProvider = MetaMask 注入的 ethereum 对象起的类型名字
 type EthereumProvider = {
   //eth_requestAccounts : 请求用户授权当前网站访问钱包账户
-  request: (args: { method: "eth_requestAccounts"}) => Promise<string[]>;
+  //
+  request: (args: {method: string; params?: unknown[]}) => Promise<unknown>;
 };
 
 //扩展全局 Window 类型。告诉ts : window 上可能存在 ethereum
@@ -66,7 +73,7 @@ async function handleConnectWallet(){
   try {
     const accounts = await window.ethereum.request({
     method: "eth_requestAccounts"
-  });
+  }) as string[];
 
   setWalletAddress(accounts[0]  as Address);} catch {
     setWalletError("Failed to connect wallet");
@@ -106,8 +113,39 @@ async function handleCheckMembership() {
       //查询结束
       setIsCheckingMembership(false);
     }
-  
 }
+    async function handlePurchaseMembership() {
+      setMembershipError(null);
+      if(window.ethereum === undefined){
+        setWalletError("Metamask is not installed");
+        return;
+      }
+      if(walletAddress === null){
+        setAccessState("locked");
+        setMembershipError("Please connect wallet first");
+        return;
+      }
+      try{
+        //用来创建一个钱包客户端
+        const walletClient = createWalletClient({
+          chain: hardhat,
+          transport: custom(window.ethereum),
+        });
+        const hash = await walletClient.writeContract({
+          address: MEMBERSHIP_LOCK_ADDRESS as Address,
+          abi: MEMBERSHIP_LOCK_ABI,
+          functionName: "purchaseMembership",
+          account: walletAddress,
+          chain: hardhat,
+        });
+        //waitForTransactionReceipt: 等待交易收据
+        await publicClient.waitForTransactionReceipt({hash});
+        await handleCheckMembership();
+      } catch (error) {
+        setMembershipError("Failed to purchase membership");
+      }
+    }
+
 
 //JSX
   return (
@@ -140,6 +178,10 @@ async function handleCheckMembership() {
 
         <button type="button" onClick={handleConnectWallet}>
         Connect Wallet
+      </button>
+
+      <button type='button' onClick={handlePurchaseMembership}>
+        Purchase Membership
       </button>
     </main>
   )
