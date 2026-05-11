@@ -6,6 +6,7 @@ import {
   createWalletClient,
   custom,
   http, 
+  parseEther,   //ETH 转成 wei
   type Address 
 } from 'viem';
 import { hardhat } from "viem/chains";
@@ -137,6 +138,9 @@ async function handleCheckMembership() {
           functionName: "purchaseMembership",
           account: walletAddress,
           chain: hardhat,
+
+          //调用 purchaseMembership 时，附带 0.01 ETH
+          value: parseEther("0.01"),
         });
         //waitForTransactionReceipt: 等待交易收据
         await publicClient.waitForTransactionReceipt({hash});

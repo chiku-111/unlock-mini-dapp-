@@ -5,6 +5,9 @@ contract MembershipLock{
     //管理员地址保存
     address public owner;
 
+    // 会员价格，用户购买会员时必须支付 0.01 ETH
+    uint256 public price = 0.01 ether;
+
     //address 对应会员到期时间戳
     mapping(address => uint256) public membershipExpiresAt;
 
@@ -15,13 +18,21 @@ contract MembershipLock{
 
     //给某个用户授予会员资格
     function grantMembership(address user, uint256 duration) public{
+
         //权限检查:只有 owner 可以授予会员
         require(msg.sender == owner, "Only owner can grant");
+
         // user会员到期时间设置为: 当前区块时间 + 会员有效时长（秒）
         membershipExpiresAt[user] = block.timestamp + duration;
     }
-    // 用户自己调用这个函数，为自己开通会员
-    function purchaseMembership() public{
+
+    
+    // 用户自己调用这个函数, 为自己开通会员, 函数允许接收ETH(payable)
+    function purchaseMembership() public payable{
+        
+        //检查用户这次付款金额是不是刚好等于会员价格
+        require(msg.value == price, "Incorrect payment");
+
         //msg.sender不是参数, sol自动提供的 当前调用者地址
         membershipExpiresAt[msg.sender] = block.timestamp + 30 days;
     }
