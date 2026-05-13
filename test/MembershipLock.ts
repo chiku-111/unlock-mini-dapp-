@@ -1,6 +1,7 @@
 import { expect } from "chai";
 
 import { network } from "hardhat";
+import { registerHooks } from "module";
 
 
 //测试网络里拿 ethers, 用来部署合约、拿测试账户、调用合约/ networkHelpers测试里“快进区块链时间”
@@ -93,7 +94,7 @@ describe("MembershipLock", function(){
 
         await expect(
             membershipLock.connect(user).purchaseMembership({
-                value: ethers.parseEther("0.05"),
+                value: ethers.parseEther("0.005"),
             })
         ).to.be.revertedWith("Incorrect payment");
 
@@ -106,7 +107,7 @@ describe("MembershipLock", function(){
 
     await expect(
         membershipLock.connect(user).purchaseMembership({
-            value: ethers.parseEther("0.05"), 
+            value: ethers.parseEther("0.02"), 
         })
     ).to.be.revertedWith("Incorrect payment"); // 期待交易失败，并且失败原因是 Incorrect payment
     }); 
@@ -160,7 +161,71 @@ describe("MembershipLock", function(){
         expect(contractBalance).to.equal(ethers.parseEther("0.01"));
         expect(await membershipLock.hasValidMembership(user.address)).to.equal(true);
     });
-  
+
+    //owner 可以把合约里的全部 ETH 提现到指定地址, recipient 表示接收ETH的人
+    it("owner can withdraw all ETH from contract to recipient", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [owner, user, recipient] = await ethers.getSigners();
+
+        const price = ethers.parseEther("0.01");
+
+        await membershipLock.connect(user).purchaseMembership({
+            value: price,
+        });
+
+        //获取当前 MembershipLock 合约部署后的地址, 用来查询这个合约地址的 ETH 余额
+        const contractAddress = await membershipLock.getAddress();
+
+        //记录提现前 recipient 钱包里的 ETH 余额, 后面用来比较提现后增加了多少
+        const recipientBalanceBefore = await ethers.provider.getBalance(recipient.address);
+
+        await membershipLock.connect(owner).withdraw(recipient.address);
+
+        // 查询 withdraw 执行后, MembershipLock 合约地址里还剩多少 ETH
+        const contractBalanceAfter = await ethers.provider.getBalance(contractAddress);
+
+        // 查询 withdraw 执行后, recipient 钱包里的 ETH 余额
+        const recipientBalanceAfter = await ethers.provider.getBalance(recipient.address);
+
+        expect(contractBalanceAfter).to.equal(0n);
+        expect(recipientBalanceAfter - recipientBalanceBefore).to.equal(price);
+    })
+
+    it("non-owner cannot withdraw ETH from contract", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [, user, recipient] = await ethers.getSigners();
+
+        await expect(
+            // 使用非 owner 的 user 调用 withdraw, 并传入 recipient 作为收款地址
+            membershipLock.connect(user).withdraw(recipient.address)
+        ).to.revertedWith("Only owner can withdraw");
+    })
+
+    //owner 调用 withdraw, 但收款地址是 address(0), 失败
+    it("owner cannot withdraw to zero address", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [owner] = await ethers.getSigners();
+
+        //获取 ethers 提供的零地址常量
+        const zeroAddress = ethers.ZeroAddress
+        
+        await expect(
+            membershipLock.connect(owner).withdraw(zeroAddress)
+        ).to.be.revertedWith("Invalid recipient");
+    })
+
+    //当合约余额为 0 时, owner 不能提现
+    it("owner cannot withdraw when contract balance is zero", async function () {
+        //部署后此时 address(this).balance = 0
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [owner, , recipient] = await ethers.getSigners();
+        
+        await expect(
+            membershipLock.connect(owner).withdraw(recipient.address)
+        ).to.be.revertedWith("No balance to withdraw");
+        
+    })
+
 })
 
 // 成功交易 await transaction;

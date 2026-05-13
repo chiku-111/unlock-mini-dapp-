@@ -16,6 +16,14 @@ contract MembershipLock{
         owner = msg.sender;
     }
 
+//modifier在函数真正执行之前, 先执行一段检查逻辑
+    modifier onlyOwner(){
+        require(msg.sender == owner, "Only owner can withdraw");
+
+        //如果上面的 require 检查通过, 就继续执行被 onlyOwner 修饰的函数主体
+        _;
+    }
+
     //给某个用户授予会员资格
     function grantMembership(address user, uint256 duration) public{
 
@@ -40,6 +48,21 @@ contract MembershipLock{
     // 查询 user 当前是否拥有有效会员
     function hasValidMembership(address user) public view returns (bool) {
         return membershipExpiresAt[user] > block.timestamp;
+    }
+
+    //提现函数 withdraw, 接收一个可以接收 ETH 的地址 recipient, 并只有 owner 可以调用
+    function withdraw(address payable recipient) external onlyOwner{
+       
+        require(recipient != address(0), "Invalid recipient");
+
+        uint256 amount = address(this).balance;
+
+        require(amount > 0, "No balance to withdraw");
+
+        // 使用 call 向 recipient 发送 amount 数量的 ETH, 并把是否成功保存到 success
+        (bool success, ) = recipient.call{value: amount}("");
+
+        require(success, "Withdraw failed");
     }
     
 }
