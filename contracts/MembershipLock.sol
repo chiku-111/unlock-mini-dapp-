@@ -11,6 +11,9 @@ contract MembershipLock{
     //address 对应会员到期时间戳
     mapping(address => uint256) public membershipExpiresAt;
 
+    //定义会员购买事件，用来记录购买者、支付金额和会员到期时间
+    event MembershipPurchased(address indexed user, uint256 amount, uint256 expiresAt);
+
 // constructor 会在合约部署时自动执行一次,部署合约的人为msg.sender,部署者设置为管理员 owner
     constructor(){
         owner = msg.sender;
@@ -40,9 +43,12 @@ contract MembershipLock{
         
         //检查用户这次付款金额是不是刚好等于会员价格
         require(msg.value == price, "Incorrect payment");
+        
+        uint256 expiresAt = block.timestamp + 30 days;
+        membershipExpiresAt[msg.sender] = expiresAt;
 
-        //msg.sender不是参数, sol自动提供的 当前调用者地址
-        membershipExpiresAt[msg.sender] = block.timestamp + 30 days;
+        emit MembershipPurchased(msg.sender, msg.value, expiresAt);
+
     }
 
     // 查询 user 当前是否拥有有效会员

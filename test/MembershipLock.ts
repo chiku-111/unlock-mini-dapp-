@@ -1,7 +1,8 @@
 import { expect } from "chai";
 
 import { network } from "hardhat";
-import { registerHooks } from "module";
+// 引入 anyValue, 用来表示事件参数里""任意值都可以接受
+import { anyValue } from "@nomicfoundation/hardhat-ethers-chai-matchers/withArgs"; 
 
 
 //测试网络里拿 ethers, 用来部署合约、拿测试账户、调用合约/ networkHelpers测试里“快进区块链时间”
@@ -226,6 +227,20 @@ describe("MembershipLock", function(){
         
     })
 
+    //用户成功调用 purchaseMembership 后, 合约会 emit MembershipPurchased 事件
+    it("should emit MembershipPurchased when user purchases membership", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [, user] = await ethers.getSigners();
+        
+        const price = ethers.parseEther("0.01");
+
+        await expect(
+            membershipLock.connect(user).purchaseMembership({
+                value: price,
+            })
+        ).to.emit(membershipLock, "MembershipPurchased")
+        .withArgs(user.address, price, anyValue);
+    })
 })
 
 // 成功交易 await transaction;
