@@ -38,6 +38,20 @@ describe("MembershipLock", function(){
         
     });
 
+    //owner 调用 grantMembership 给用户授权会员时, 合约会 emit MembershipGranted 事件
+    it("should emit MembershipGranted when owner grants membership", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [owner, user] = await ethers.getSigners();
+
+        const duration = 60*60;
+
+        await expect(
+            membershipLock.connect(owner).grantMembership(user.address, duration)
+        ).to.emit(membershipLock, "MembershipGranted")
+        .withArgs(user.address, duration, anyValue);
+        // 断言事件参数依次是: 被授权用户地址、授权时长、任意到期时间
+    })
+
     //owner 授予会员后, 用户应变成有效会员
     it("should return  true after owner grants membership", async function () {
         const membershipLock = await ethers.deployContract("MembershipLock");
@@ -192,6 +206,24 @@ describe("MembershipLock", function(){
         expect(recipientBalanceAfter - recipientBalanceBefore).to.equal(price);
     })
 
+    //
+    it("should emit Withdrawn when owner withdraws ETH", async function () {
+        const membershipLock = await ethers.deployContract("MembershipLock");
+        const [owner, user, recipient] = await ethers.getSigners();
+
+        const price = ethers.parseEther("0.01");
+
+        await membershipLock.connect(user).purchaseMembership({
+            value: price,
+        });
+
+        await expect(
+            membershipLock.connect(owner).withdraw(recipient.address)
+        ).to.emit(membershipLock, "Withdrawn")
+        .withArgs(recipient.address, price);
+
+    })
+
     it("non-owner cannot withdraw ETH from contract", async function () {
         const membershipLock = await ethers.deployContract("MembershipLock");
         const [, user, recipient] = await ethers.getSigners();
@@ -199,7 +231,7 @@ describe("MembershipLock", function(){
         await expect(
             // 使用非 owner 的 user 调用 withdraw, 并传入 recipient 作为收款地址
             membershipLock.connect(user).withdraw(recipient.address)
-        ).to.revertedWith("Only owner can withdraw");
+        ).to.be.revertedWith("Only owner can withdraw");
     })
 
     //owner 调用 withdraw, 但收款地址是 address(0), 失败
@@ -241,6 +273,10 @@ describe("MembershipLock", function(){
         ).to.emit(membershipLock, "MembershipPurchased")
         .withArgs(user.address, price, anyValue);
     })
+
+
+
+
 })
 
 // 成功交易 await transaction;

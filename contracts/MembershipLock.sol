@@ -14,6 +14,10 @@ contract MembershipLock{
     //定义会员购买事件，用来记录购买者、支付金额和会员到期时间
     event MembershipPurchased(address indexed user, uint256 amount, uint256 expiresAt);
 
+    event MembershipGranted(address indexed user, uint256 duration, uint256 expiresAt);
+
+    event Withdrawn(address indexed recipient, uint256 amount);
+
 // constructor 会在合约部署时自动执行一次,部署合约的人为msg.sender,部署者设置为管理员 owner
     constructor(){
         owner = msg.sender;
@@ -34,7 +38,10 @@ contract MembershipLock{
         require(msg.sender == owner, "Only owner can grant");
 
         // user会员到期时间设置为: 当前区块时间 + 会员有效时长（秒）
-        membershipExpiresAt[user] = block.timestamp + duration;
+        uint256 expiresAt = block.timestamp + duration;
+        membershipExpiresAt[user]= expiresAt;
+
+        emit MembershipGranted(user, duration, expiresAt);
     }
 
     
@@ -69,6 +76,9 @@ contract MembershipLock{
         (bool success, ) = recipient.call{value: amount}("");
 
         require(success, "Withdraw failed");
+
+        // 发出提现事件, 记录本次成功提现的收款地址和金额
+        emit Withdrawn(recipient, amount);
     }
     
 }
